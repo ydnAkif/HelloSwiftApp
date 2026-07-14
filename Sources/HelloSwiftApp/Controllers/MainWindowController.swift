@@ -15,9 +15,11 @@ class MainWindowController: NSWindowController {
         )
 
         window.title = "HelloSwiftApp - Organize Sürüm 🛠️"
-        window.center()
 
         self.init(window: window)
         self.contentViewController = MainViewController()
+
+        // window.center() çağrısını init'ten SONRA yapmak daha güvenlidir
+        window.center()
     }
 }

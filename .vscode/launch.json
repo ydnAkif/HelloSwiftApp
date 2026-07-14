@@ -1,6 +1,15 @@
 {
   "configurations": [
     {
+      "type": "lldb",
+      "request": "launch",
+      "name": "HelloSwiftApp (.app Hata Ayıkla)",
+      "program": "${workspaceFolder}/HelloSwiftApp.app/Contents/MacOS/HelloSwiftApp",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "macOS Package Build"
+    },
+    {
       "type": "swift",
       "request": "launch",
       "args": [],
@@ -19,26 +28,6 @@
       "target": "HelloSwiftApp",
       "configuration": "release",
       "preLaunchTask": "swift: Build Release HelloSwiftApp"
-    },
-    {
-      "type": "swift",
-      "request": "launch",
-      "args": [],
-      "cwd": "${workspaceFolder:HelloSwiftApp}",
-      "name": "Debug main",
-      "target": "main",
-      "configuration": "debug",
-      "preLaunchTask": "swift: Build Debug main"
-    },
-    {
-      "type": "swift",
-      "request": "launch",
-      "args": [],
-      "cwd": "${workspaceFolder:HelloSwiftApp}",
-      "name": "Release main",
-      "target": "main",
-      "configuration": "release",
-      "preLaunchTask": "swift: Build Release main"
     }
   ]
 }
