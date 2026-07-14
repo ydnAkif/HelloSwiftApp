@@ -1,0 +1,44 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:HelloSwiftApp}",
+      "name": "Debug HelloSwiftApp",
+      "target": "HelloSwiftApp",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug HelloSwiftApp"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:HelloSwiftApp}",
+      "name": "Release HelloSwiftApp",
+      "target": "HelloSwiftApp",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release HelloSwiftApp"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:HelloSwiftApp}",
+      "name": "Debug main",
+      "target": "main",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug main"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:HelloSwiftApp}",
+      "name": "Release main",
+      "target": "main",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release main"
+    }
+  ]
+}
