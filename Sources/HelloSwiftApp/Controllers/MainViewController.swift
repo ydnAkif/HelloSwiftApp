@@ -17,9 +17,15 @@ class MainViewController: NSViewController {
         self.view.wantsLayer = true
     }
 
+    private var cachedSwiftVersion: String?
+    private var swiftVersionTask: Task<String, Never>?
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        swiftVersionTask = Task.detached(priority: .utility) { [weak self] in
+            await self?.getSwiftVersion() ?? "Bilinmiyor"
+        }
     }
 
     private func setupUI() {
@@ -42,22 +48,14 @@ class MainViewController: NSViewController {
         }
 
         // 3. GÜVENLİ RESİM YÜKLEME (Bundle Yöntemi)
-        // currentDirectoryPath yerine Bundle kullanmak zorundayız.
-        let resourcesPath = Bundle.main.resourcePath ?? "."
-        let logoPath = "\(resourcesPath)/swift-logo.png"
-        let sourcePath =
-            "\(FileManager.default.currentDirectoryPath)/Sources/HelloSwiftApp/Resources/swift-logo.png"
-
-        if let logoImage = NSImage(contentsOfFile: logoPath) {
-            logoButton.image = logoImage
-            logoButton.imageScaling = .scaleProportionallyUpOrDown
-        } else if let logoImage = NSImage(contentsOfFile: sourcePath) {
+        if let logoPath = Bundle.module.path(forResource: "swift-logo", ofType: "png"),
+            let logoImage = NSImage(contentsOfFile: logoPath)
+        {
             logoButton.image = logoImage
             logoButton.imageScaling = .scaleProportionallyUpOrDown
         } else {
-            // Eğer "swift-logo" adı ile bulunamazsa, kullanıcıya nazik bir hata göster
             infoLabel.stringValue =
-                "Logo bulunamadı! (swift-logo.png dosyasının projeye 'Copy Bundle Resources' olarak eklendiğinden emin olun) ⚠️"
+                "Logo bulunamadı! (swift-logo.png dosyasının projeye 'Copy Bundle Resources' olarak eklendiğinden emin olun)"
             infoLabel.textColor = .systemRed
         }
 
@@ -82,23 +80,45 @@ class MainViewController: NSViewController {
             infoLabel.stringValue = defaultWelcomeMessage
             infoLabel.textColor = .secondaryLabelColor
             isShowingInfo = false
-        } else {
-            let osVersion = ProcessInfo.processInfo.operatingSystemVersionString
-            let swiftVersion = getSwiftVersion()
+            return
+        }
+        let osVersion = ProcessInfo.processInfo.operatingSystemVersionString
+        isShowingInfo = true
 
-            infoLabel.stringValue = "Swift: \(swiftVersion)  |  macOS: \(osVersion)"
-            infoLabel.textColor = .systemOrange
-            isShowingInfo = true
+        if let cached = cachedSwiftVersion {
+            infoLabel.stringValue = "Swift: \(cached)  |  macOS: \(osVersion)"
+            infoLabel.textColor = .secondaryLabelColor
+            return
+        }
+        infoLabel.stringValue = "Sürüm bilgisi alınıyor..."
+        infoLabel.textColor = .systemOrange
+
+        if swiftVersionTask == nil {
+            swiftVersionTask = Task.detached(priority: .utility) { [weak self] in
+                await self?.getSwiftVersion() ?? "Bilinmiyor"
+            }
+        }
+
+        Task { [weak self] in
+            guard let self else { return }
+            let swiftVersion = await (self.swiftVersionTask?.value ?? "Bilinmiyor")
+            self.cachedSwiftVersion = swiftVersion
+
+            // Kullanıcı bu arada kapattıysa etiketi ezme
+            guard self.isShowingInfo else { return }
+            self.infoLabel.stringValue = "Swift: \(swiftVersion)  |  macOS: \(osVersion)"
+            self.infoLabel.textColor = .secondaryLabelColor
         }
     }
 
-    private func getSwiftVersion() -> String {
+    private nonisolated func getSwiftVersion() async -> String {
         let process = Process()
-        process.launchPath = "/usr/bin/xcrun"
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
         process.arguments = ["swift", "--version"]
 
         let pipe = Pipe()
         process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
 
         do {
             try process.run()
@@ -106,7 +126,6 @@ class MainViewController: NSViewController {
 
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             if let output = String(data: data, encoding: .utf8) {
-                // "Swift version 6.3.3 (swift-6.3.3-RELEASE)" gibi bir string döner
                 if let range = output.range(of: "Swift version ") {
                     let versionString = String(output[range.upperBound...])
                     if let spaceIndex = versionString.firstIndex(of: " ") {
