@@ -1,9 +1,11 @@
 import Cocoa
 
+/// Application entry point and top-level app menu configuration.
 @main
 struct HelloSwiftApp {
 
-    // Swift 6 Strict Concurrency için giriş noktasını da MainActor ile işaretliyoruz
+    /// Marks the app entry point as `@MainActor` to satisfy Swift 6 strict
+    /// concurrency requirements for AppKit UI code.
     @MainActor
     static func main() {
         let app = NSApplication.shared
@@ -14,10 +16,12 @@ struct HelloSwiftApp {
 
         setupMainMenu()
 
-        // app.run() bloklayan bir çağrıdır, delegate bu sayede bellekte canlı kalır.
+        // `app.run()` is a blocking call; this keeps the delegate alive
+        // for the app lifecycle.
         app.run()
     }
 
+    /// Creates a minimal application menu with a standard Quit action.
     @MainActor
     static func setupMainMenu() {
         let mainMenu = NSMenu()

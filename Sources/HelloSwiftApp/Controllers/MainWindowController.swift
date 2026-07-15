@@ -1,8 +1,10 @@
 import Cocoa
 
+/// Owns and configures the main application window.
 @MainActor
 class MainWindowController: NSWindowController {
 
+    /// Creates the main window with a default size and hosts `MainViewController`.
     convenience init() {
         let rect = NSRect(x: 0, y: 0, width: 500, height: 400)
         let styleMask: NSWindow.StyleMask = [.titled, .closable, .miniaturizable, .resizable]
@@ -19,7 +21,7 @@ class MainWindowController: NSWindowController {
         self.init(window: window)
         self.contentViewController = MainViewController()
 
-        // window.center() çağrısını init'ten SONRA yapmak daha güvenlidir
+        // Calling `window.center()` after `self.init(window:)` is safer.
         window.center()
     }
 }

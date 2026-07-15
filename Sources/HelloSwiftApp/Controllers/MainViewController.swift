@@ -1,5 +1,6 @@
 import Cocoa
 
+/// Main content controller that displays the Swift logo and runtime version info.
 @MainActor
 class MainViewController: NSViewController {
 
@@ -14,7 +15,7 @@ class MainViewController: NSViewController {
     override func loadView() {
         let viewSize = NSRect(x: 0, y: 0, width: 500, height: 400)
         self.view = NSView(frame: viewSize)
-        // M-serisi GPU hızlandırması için kritik
+        // Important for GPU-accelerated rendering, especially on Apple Silicon.
         self.view.wantsLayer = true
     }
 
@@ -31,26 +32,27 @@ class MainViewController: NSViewController {
         startSwiftVersionFetchIfNeeded()
     }
 
+    /// Builds the UI hierarchy and constraints for the logo and info label.
     private func setupUI() {
-        // 1. Bilgi Etiketi
+        // 1) Info label
         infoLabel.font = NSFont.systemFont(ofSize: 15, weight: .medium)
         infoLabel.textColor = .secondaryLabelColor
         infoLabel.alignment = .center
         infoLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(infoLabel)
 
-        // 2. Swift Logo Butonu
+        // 2) Swift logo button
         logoButton.isBordered = false
         logoButton.translatesAutoresizingMaskIntoConstraints = false
         logoButton.target = self
         logoButton.action = #selector(logoClicked)
 
-        // Sadece hücre (cell) üzerinden border ayarı yapılır
+        // Border behavior is configured through the underlying button cell.
         if let cell = logoButton.cell as? NSButtonCell {
             cell.showsBorderOnlyWhileMouseInside = false
         }
 
-        // 3. GÜVENLİ RESİM YÜKLEME (Bundle Yöntemi)
+        // 3) Safe image loading from the module bundle
         if let logoPath = Bundle.module.path(forResource: "swift-logo", ofType: "png"),
             let logoImage = NSImage(contentsOfFile: logoPath)
         {
@@ -64,7 +66,7 @@ class MainViewController: NSViewController {
 
         view.addSubview(logoButton)
 
-        // 4. Auto Layout
+        // 4) Auto Layout constraints
         NSLayoutConstraint.activate([
             logoButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             logoButton.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -20),
@@ -78,6 +80,7 @@ class MainViewController: NSViewController {
         ])
     }
 
+    /// Toggles between welcome text and system/runtime version details.
     @objc private func logoClicked() {
         if isShowingInfo {
             infoLabel.stringValue = defaultWelcomeMessage
@@ -107,13 +110,14 @@ class MainViewController: NSViewController {
                 self.cachedSwiftVersion = swiftVersion
             }
 
-            // Kullanıcı bu arada kapattıysa etiketi ezme
+            // Do not overwrite the label if the user toggled back meanwhile.
             guard self.isShowingInfo else { return }
             self.infoLabel.stringValue = "Swift: \(swiftVersion)  |  macOS: \(osVersion)"
             self.infoLabel.textColor = .secondaryLabelColor
         }
     }
 
+    /// Starts a background version fetch task if one is not already running.
     private func startSwiftVersionFetchIfNeeded() {
         guard swiftVersionTask == nil else { return }
 
@@ -122,6 +126,8 @@ class MainViewController: NSViewController {
         }
     }
 
+    /// Returns the first completed result between version fetch and timeout.
+    /// - Parameter seconds: Timeout threshold in seconds.
     private nonisolated static func fetchSwiftVersionWithTimeout(seconds: UInt64) async -> String {
         await withTaskGroup(of: String.self) { group in
             group.addTask {
@@ -139,6 +145,7 @@ class MainViewController: NSViewController {
         }
     }
 
+    /// Runs `xcrun swift --version` asynchronously and extracts the Swift version.
     private nonisolated static func getSwiftVersionNonBlocking() async -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
@@ -172,6 +179,9 @@ class MainViewController: NSViewController {
         }
     }
 
+    /// Parses a semantic version token from `swift --version` output.
+    /// - Parameter output: Full stdout string from the command.
+    /// - Returns: Version token (for example `6.2`) when available.
     private nonisolated static func parseSwiftVersion(from output: String) -> String? {
         let lines = output.split(separator: "\n")
 
