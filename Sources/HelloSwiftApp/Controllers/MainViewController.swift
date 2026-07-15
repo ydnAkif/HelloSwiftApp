@@ -9,6 +9,7 @@ class MainViewController: NSViewController {
 
     private var isShowingInfo = false
     private let defaultWelcomeMessage = "Sürüm bilgilerini görmek için logoya tıkla! 👇"
+    private let swiftVersionTimeoutSeconds: UInt64 = 3
 
     override func loadView() {
         let viewSize = NSRect(x: 0, y: 0, width: 500, height: 400)
@@ -20,12 +21,14 @@ class MainViewController: NSViewController {
     private var cachedSwiftVersion: String?
     private var swiftVersionTask: Task<String, Never>?
 
+    deinit {
+        swiftVersionTask?.cancel()
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        swiftVersionTask = Task.detached(priority: .utility) { [weak self] in
-            await self?.getSwiftVersion() ?? "Bilinmiyor"
-        }
+        startSwiftVersionFetchIfNeeded()
     }
 
     private func setupUI() {
@@ -93,16 +96,16 @@ class MainViewController: NSViewController {
         infoLabel.stringValue = "Sürüm bilgisi alınıyor..."
         infoLabel.textColor = .systemOrange
 
-        if swiftVersionTask == nil {
-            swiftVersionTask = Task.detached(priority: .utility) { [weak self] in
-                await self?.getSwiftVersion() ?? "Bilinmiyor"
-            }
-        }
+        startSwiftVersionFetchIfNeeded()
 
         Task { [weak self] in
             guard let self else { return }
             let swiftVersion = await (self.swiftVersionTask?.value ?? "Bilinmiyor")
-            self.cachedSwiftVersion = swiftVersion
+            self.swiftVersionTask = nil
+
+            if swiftVersion != "Bilinmiyor" {
+                self.cachedSwiftVersion = swiftVersion
+            }
 
             // Kullanıcı bu arada kapattıysa etiketi ezme
             guard self.isShowingInfo else { return }
@@ -111,7 +114,32 @@ class MainViewController: NSViewController {
         }
     }
 
-    private nonisolated func getSwiftVersion() async -> String {
+    private func startSwiftVersionFetchIfNeeded() {
+        guard swiftVersionTask == nil else { return }
+
+        swiftVersionTask = Task(priority: .utility) { [swiftVersionTimeoutSeconds] in
+            await Self.fetchSwiftVersionWithTimeout(seconds: swiftVersionTimeoutSeconds)
+        }
+    }
+
+    private nonisolated static func fetchSwiftVersionWithTimeout(seconds: UInt64) async -> String {
+        await withTaskGroup(of: String.self) { group in
+            group.addTask {
+                await Self.getSwiftVersionNonBlocking()
+            }
+
+            group.addTask {
+                try? await Task.sleep(nanoseconds: seconds * 1_000_000_000)
+                return "Bilinmiyor"
+            }
+
+            let firstResult = await group.next() ?? "Bilinmiyor"
+            group.cancelAll()
+            return firstResult
+        }
+    }
+
+    private nonisolated static func getSwiftVersionNonBlocking() async -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
         process.arguments = ["swift", "--version"]
@@ -122,21 +150,46 @@ class MainViewController: NSViewController {
 
         do {
             try process.run()
-            process.waitUntilExit()
+
+            while process.isRunning {
+                if Task.isCancelled {
+                    process.terminate()
+                    return "Bilinmiyor"
+                }
+
+                try? await Task.sleep(nanoseconds: 50_000_000)
+            }
 
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let output = String(data: data, encoding: .utf8) {
-                if let range = output.range(of: "Swift version ") {
-                    let versionString = String(output[range.upperBound...])
-                    if let spaceIndex = versionString.firstIndex(of: " ") {
-                        return String(versionString[..<spaceIndex])
-                    }
-                }
+            guard let output = String(data: data, encoding: .utf8) else {
+                return "Bilinmiyor"
             }
+
+            return Self.parseSwiftVersion(from: output) ?? "Bilinmiyor"
         } catch {
             print("Swift version alınamadı: \(error)")
+            return "Bilinmiyor"
+        }
+    }
+
+    private nonisolated static func parseSwiftVersion(from output: String) -> String? {
+        let lines = output.split(separator: "\n")
+
+        guard
+            let versionLine = lines.first(where: {
+                $0.localizedCaseInsensitiveContains("swift version")
+            })
+        else {
+            return nil
         }
 
-        return "Bilinmiyor"
+        let tokens = versionLine.split(whereSeparator: { $0.isWhitespace })
+        guard let versionTokenIndex = tokens.firstIndex(where: { $0.lowercased() == "version" }),
+            versionTokenIndex + 1 < tokens.count
+        else {
+            return nil
+        }
+
+        return String(tokens[versionTokenIndex + 1])
     }
 }
