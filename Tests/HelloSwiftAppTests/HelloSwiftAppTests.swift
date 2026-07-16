@@ -11,9 +11,9 @@ import Cocoa
 }
 
 @Test func testSwiftVersionParsingEdgeCases() {
-    let output1 = "Swift version 6.2 (swift-6.2-RELEASE)"
+    let output1 = "Swift version 6.3.3 (swift-6.3.3-RELEASE)"
     let parsed1 = MainViewController.parseSwiftVersion(from: output1)
-    #expect(parsed1 == "6.2")
+    #expect(parsed1 == "6.3.3")
 
     let output2 = "Swift version 5.10"
     let parsed2 = MainViewController.parseSwiftVersion(from: output2)
