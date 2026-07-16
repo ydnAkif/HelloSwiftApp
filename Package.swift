@@ -10,11 +10,15 @@ let package = Package(
         .executable(name: "HelloSwiftApp", targets: ["HelloSwiftApp"])
     ],
     targets: [
-        .executableTarget(
-            name: "HelloSwiftApp",
-            resources: [
-                .process("Resources")
-            ]
-        )
-    ]
+            .executableTarget(
+                name: "HelloSwiftApp",
+                resources: [
+                    .process("Resources")
+                ]
+            ),
+            .testTarget(
+                name: "HelloSwiftAppTests",
+                dependencies: ["HelloSwiftApp"]
+            )
+        ]
 )

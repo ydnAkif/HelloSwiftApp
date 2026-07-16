@@ -4,9 +4,11 @@ import Cocoa
 @MainActor
 class MainViewController: NSViewController {
 
-    private let logoButton = NSButton()
-    private let infoLabel = NSTextField(
-        labelWithString: "Sürüm bilgilerini görmek için logoya tıkla! 👇")
+    /// Logo button – made internal for testing purposes
+    internal let logoButton = NSButton()
+
+    /// Info label – made internal for testing purposes
+    internal let infoLabel = NSTextField(labelWithString: "Sürüm bilgilerini görmek için logoya tıkla! 👇")
 
     private var isShowingInfo = false
     private let defaultWelcomeMessage = "Sürüm bilgilerini görmek için logoya tıkla! 👇"
@@ -63,7 +65,6 @@ class MainViewController: NSViewController {
                 "Logo bulunamadı! (swift-logo.png dosyasının projeye 'Copy Bundle Resources' olarak eklendiğinden emin olun)"
             infoLabel.textColor = .systemRed
         }
-
         view.addSubview(logoButton)
 
         // 4) Auto Layout constraints
@@ -81,7 +82,7 @@ class MainViewController: NSViewController {
     }
 
     /// Toggles between welcome text and system/runtime version details.
-    @objc private func logoClicked() {
+    @objc internal func logoClicked() {
         if isShowingInfo {
             infoLabel.stringValue = defaultWelcomeMessage
             infoLabel.textColor = .secondaryLabelColor
@@ -128,7 +129,7 @@ class MainViewController: NSViewController {
 
     /// Returns the first completed result between version fetch and timeout.
     /// - Parameter seconds: Timeout threshold in seconds.
-    private nonisolated static func fetchSwiftVersionWithTimeout(seconds: UInt64) async -> String {
+    internal nonisolated static func fetchSwiftVersionWithTimeout(seconds: UInt64) async -> String {
         await withTaskGroup(of: String.self) { group in
             group.addTask {
                 await Self.getSwiftVersionNonBlocking()
@@ -182,7 +183,7 @@ class MainViewController: NSViewController {
     /// Parses a semantic version token from `swift --version` output.
     /// - Parameter output: Full stdout string from the command.
     /// - Returns: Version token (for example `6.2`) when available.
-    private nonisolated static func parseSwiftVersion(from output: String) -> String? {
+    internal nonisolated static func parseSwiftVersion(from output: String) -> String? {
         let lines = output.split(separator: "\n")
 
         guard
